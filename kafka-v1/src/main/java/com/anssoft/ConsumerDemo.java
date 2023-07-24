@@ -1,51 +1,57 @@
 package com.anssoft;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Properties;
 
 @Slf4j
 public class ConsumerDemo {
     public static void main(String[] args) {
         log.info("Test");
+
+        String groupId = "my-java-application";
+        String topic = "second-topic";
+
         Properties properties = new Properties();
         properties.put("bootstrap.servers", "localhost:9092");
 
         properties.put("key.deserializer", StringDeserializer.class.getName());
         properties.put("value.deserializer", StringDeserializer.class.getName());
 
-        //Don't use in production
-        //properties.setProperty("partitioner.class", RoundRobinPartitioner.class.getName());
+        properties.put("auto.offset.reset", "earliest");
+        properties.put("group.id", groupId);
 
-        KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(properties);
 
-        for(int i=0;i<10;i++) {
-            String key = "id"+i;
-            ProducerRecord<String, String> producerRecord = new ProducerRecord("second-topic", key, "hello world " + i);
+        consumer.subscribe(Arrays.asList(topic));
 
-            producer.send(producerRecord, new Callback() {
-                @Override
-                public void onCompletion(RecordMetadata metadata, Exception e) {
-                    //executes every time a record successfully sent or an exception is thrown
-                    if (e == null) {
-                        //the record was successfully sent
-                        log.info("Key: " + key + " | Partition: " + metadata.partition());
-                    } else {
-                        log.error("Error while producing record");
-                    }
-                }
-            });
+        while(true) {
+            log.info("Polling");
 
+            ConsumerRecords<String, String> consumerRecords = consumer.poll(Duration.ofSeconds(1));
+
+            for(ConsumerRecord<String, String> record: consumerRecords) {
+                log.info("key: {}, value: {}", record.key(), record.value());
+                log.info("partition: {}, offset: {}", record.partition(), record.offset());
+            }
         }
 
-        producer.flush();//to send all data and block until done -- synchronous
 
-        producer.close();  //flush and close the producer
+
     }
 }

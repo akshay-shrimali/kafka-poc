@@ -20,7 +20,7 @@ public class ProducerDemoWithKeys {
         properties.put("value.serializer", StringSerializer.class.getName());
 
         //Don't use in production
-        //properties.setProperty("partitioner.class", RoundRobinPartitioner.class.getName());
+        //properties.setProperty("partitioner*.class", RoundRobinPartitioner.class.getName());
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
